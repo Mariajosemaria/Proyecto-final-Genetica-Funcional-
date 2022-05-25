@@ -1,0 +1,308 @@
+---
+title: "Proyecto  final"
+author: "Perla Rodríguez, Maria José Santos & Andrea Vega M."
+date: '2022-05-23'
+output: 
+  rmdformats::downcute:
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    gallery: false
+    highlight: tango
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Impacto de la infección helmíntica sobre la microbiota intestinal de gatos domésticos
+
+El objetivo de este estudio es investigar los efectos cualitativos y cuantitativos que ejerce la infección parasitaria por *Toxocara cati* en la microbiota intestinal del gato doméstico *Felis catus*. Este estudio se basa en el análisis de 47 muestras de Microbiota fecal de gato; 24 con infección patente por *T. cati ,* 21 gatos sin infección por *T. cati*, y 2 controles ambientales (gatos de bioterio).
+
+### Introducción 
+
+El tracto gastrointestinal de los vertebrados podría considerarse todo un ecosistema en sí mismo; está habitado por una gran variedad de organismos, que a grandes rasgos, podemos clasificar en dos; macrobiota y microbiota. Por una parte, la microbiota comprende a los microoganismos comensales que desempeñan un importante papel en la obtención de nutrientes del hospedero, así como el mantenimiento del equilibrio energético y el mantenimiento del sistema inmune. Por otra parte, la macrobiota suele estar conformada por organismos multicelulares, que usualmente son parásitos. Entre los parásitos intraintestinales más comunes podemos encontrar a los helmintos, que se consideran perjudiciales para la salud del hospedero (Cortés et al., 2019).
+
+Ambas comunidades de organismos comparten el mismo entorno dentro del hospedero. Se sabe que las interacciones de microbiota con helmintos pueden afectar a la salud del huesped y al equilibrio homeostático, ya que estas interacciones juegan un papel importante en la patofisiología del cuadro que supone una infección helmíntica, así como la variación en la abundancia de poblaciones de bacterias habitantes de diferentes nichos del tracto gastrointestinal, lo que puede resultar en consencuencias para la fisiología del hospedero (Duarte, 2018).
+
+Además, tanto los helmintos como las bacterias comensales han desarrollado una variedad de estrategias para modular la respuesta inmune del huésped con el fin de establecerse en el intestino del huésped. Por lo tanto, es postible que el establecimiento exitoso de nematodos parásitos en el intestino de los vertebrados se logre, al menos en parte, a través de interacciones físicas, moleculares y/o inmunológicas con la microbiota comensal residente (Cortes et al., 2019; Duarte et al., 2016)
+
+Los nemátodos ascariroideos son de los parásitos más comunes del tracto intestital de animáles domésticos. Toxocara canis y T. cati son nemátodos ascariroideos que infectan a perros y gatos. Debido al potencial zoonótico que tiene T. cani, se sabe mucho sobre las características patogénicas e inmunológicas de este parásito, así como sobre los mechanismos de interacción con el hospedero. En contra parte, hay pocos estudios sobre las interacciones que ocurren en el intestino de los hospederos felinos infectados con T. cati
+
+i
+
+Objetivo/hipótesis
+
+H1: La microbiota intestinal de gatos que cursan con infección por T*oxocara cati* es menos diversa debido a la competencia por nutrientes entre microbiota y helmintos.
+
+H2: En gatos no parasitados por *T. cati*, se espera encontrar microbiotas sin fluctuaciones en la diversidad.
+
+La diversidad de la microbiota intestinal de gatos de bioterio y gatos sin infección es similar en comparación con la diversidad de la microbiota intestinal de gatos parasitados por *T. cati.*
+
+![](7gatito.png)
+
+![](toxocaracati.webp)
+
+## Obtención de datos
+
+#### BÚSQUEDA IMPLACABLE
+
+El primer paso fue obtener los datos, para lo cual consultamos la página **MGnify** (<https://www.ebi.ac.uk/metagenomics/browse/studies?page=2>). **MGnify** es una plataforma de análisis y bases de datos de proyectos de secuenciación de microbiomas analizados, alojada por el Laboratorio Europeo de Biología Molecular. MGnify es una plataforma de libre acceso.
+
+Las bases de datos de esta página estan registrados con un ID de acceso, y pueden ser descargados en formato fastq y SRA. Además cuenta con un paquete especializado en R, gracias al cual se tiene la opción de convertir las bases de datos a un objeto phyloseq para su posterior análisis.
+
+Seleccionamos la base de datos con ID: "MGYS00003433", asociada al artículo de Duarte y colaboradores (2016) ; " *Infecciones helmínticas y microbiota intestinal; una perspectiva felina*". Es necesario acalarar que se debe seleccionar el "Study ID", y no el de la muestra, ni el "Analysis accesion".
+
+## Librería Mgnify en R
+
+El siguiente apartado describe el código con el que se procesaron los datos a través de la libreria especializada, para lo cual se necesitó de las siguientes librerias precargadas.
+
+```{r}
+library(usethis)#Esta librería permite la automatización de tareas repetitivas
+library(devtools) 
+library(phyloseq)#Librería que permite el manejo y análisis de microbiomas 
+library(plyr)#Esta librería permite la separación y combinación de datos.
+library(dplyr)#Esta librería permite la manipulación de datos.
+library(reshape2)#Facilita la transformación de datos entre formatos ancho y largo
+library(httr)# permite el contacto entre APIs de la web y Rstudio.
+library(urltools)
+library(vegan)#Esta librería contiene funciones que permiten el análisis de la diversidad y de la ecología de comunidades
+library(ggplot2) # Esta librería permite relizar gráficas personalizadas.
+library(IRdisplay)
+library(knitr)# Es una librería que permite generar reportes dinámicos en R
+```
+
+Una vez instaladas las librerias, lo que sigue es correr el siguiente comando para instalar el paquete de Mgnify
+
+```{r}
+devtools::install_github("beadyallen/MGnifyR", force=TRUE)
+library(MGnifyR) #Y llamamos la libreria 
+```
+
+Ahora comenzamos a preparar nuestro directorio de trabajo para recibir los archivos que esta librería descarga. El comando *mgnify_client* no es esencial, pero permite el manejo simple de la autenticación del usuario, el acceso a datos privados y el almacenamiento local en caché de los resultados. Si no especificamos el directorio al que queremos enciar nuestros archivos pero **usecache=T** se creara por default una carpeta dentro del directorio de trabajo que contendrá nuestros archivos.
+
+**NOTA:** No es necesario dar nombre de usuario ni contraseña.
+
+```{r}
+mg <- mgnify_client(username= NULL, password=NULL, usecache=T)
+```
+
+### Obteniendo una lista de los análisis para el estudio
+
+Ahora, indicamos el ID del estudio ( MGYS00003433) del que obtendremos los datos.
+
+```{r}
+analyses_accessions <- mgnify_analyses_from_studies(mg, "MGYS00003433")
+```
+
+### Descargar metadatos
+
+Procedemos a descargar metadatos para todos los análisis realizados, los metadatos están situados en un dataframe.
+
+```{r}
+analyses_metadata_df <- mgnify_get_analyses_metadata(mg, analyses_accessions)
+```
+
+#### Mostrar metadatos
+
+El dataframe generado es grande, así que podemos tener una previsualización de los metadatos usando el comando `(head)`. Las muestras con los IDs"MGYA00238623" "MGYA00238624" son controles negativos.
+
+```{r, echo=FALSE}
+head(analyses_metadata_df)
+```
+
+### Convertir datos a un objeto Phyloseq
+
+El paquete phyloseq es una herramienta para importar, almacenar, analizar y mostrar gráficamente datos de secuenciación filogenética complejos que ya se han agrupado en unidades taxonómicas operativas u OTUs, especialmente cuando hay datos de muestra asociados, árbol filogenético y/o asignación taxonómica de las OTU.
+
+La librería Mgnify permite la conversión de los datos a un objeto phyloseq mediante el comando `mgnify_get_analyses_phyloseq`. Este comando recupera todos atributos de los metadatos del estudio, además de que muestra y analiza los atributos junto con todas las tablas de OTUS de un taxa determinado, finalmente las fusiona para crear el objeto phyloseq, que a su vez contiene los objetos otu_table, tax_table, y sample_data. El comando tiene como opciones el cliente de mgnify (mg), seguido del objeto que contiene a los metadatos de interés. La opción `tax_SU` permite elegir que subunidad de taxas deben seleccionarse, más específicamente, qué porciones del rRNA deben tomarse en cuenta, en este caso se elige la subunidad pequeña o SSU.
+
+```{r}
+analyses_ps <- mgnify_get_analyses_phyloseq(mg, analyses_metadata_df$analysis_accession, tax_SU = "SSU")
+analyses_ps #imprimir el objeto phyloseq
+```
+
+# Reemplazamos los nombres de las muestras
+
+Mediante el comando `get_variable`, generamos un vector que contiene los alias de las muestras, de esta manera es más fácil la interpretación de resultados, debido a que los alias hacen fácil la identificación de la procedencia de las muestras; considerando que los alias B047 y B046 corresponden a las muestras fecales procedentes de los gatos de bioterio que corresponden a los controles ambientales. Los alias I042, I041 I040, I039, I038, I036, I033, I032, I031, I027, I026, I024, I023, I020, I019, I018, I017, I015, I012, I009, I008, I007, I005 y I001 corresponden a las muestras fecales procedentes de gatos infectados con *T. Cati*. Mientras que los alias C045, C044, C043, C037, C035, C034, C030, C029, C028, C025, C022, C021, C016, C010, C011, C013, C004, C002, C006, C014 y C003, corresponden a muestras fecales procedentes de controles negativos, es decir, gatos sin infección por *T. cati.*
+
+Sustituiremos los nombres de nuestras muestras por unos que nos puedan brindar informacion sobre el tipo de muestra que estamos trabajando, si es un control, un gato infectado o uno no infectado. Esta inforación esta pseudo contenida en la variable "sample_sample.alias", donde B+= gato de bioterio, I+=gato infectado por T. cati, y C+=gato no infectado
+
+```{r}echo = FALSE}
+#INTENTO FALLIDO DE MANIPULAR PHYLOSEQ AÑADIENDO DATA TYPE
+#Se intentó estratificar 
+
+SampleType<-c("bioterio","bioterio", "infectado","infectado" ,"infectado","infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "infectado", "negativo", "negativo", "negativo",  "negativo", "negativo", "negativo", "negativo",  "negativo", "negativo", "negativo", "negativo", "negativo","negativo", "negativo", "negativo", "negativo", "negativo","negativo", "negativo", "negativo", "negativo")
+
+#otro intento fallido de estratificación que permitiera el acceso a las variables dentro del objeto Phyloseq
+
+library(tidyverse)
+install.packages("gdata")
+library(dplyr)
+library(gdata)
+analyses_ps
+grupos<- case_when (
+  str_detect(get_variable(analyses_ps, "sample_sample.alias"), "B0") == TRUE ~ "bioterio",
+  str_detect(get_variable(analyses_ps, "sample_sample.alias"), "I0") == TRUE ~ "infectado", 
+  str_detect(get_variable(analyses_ps, "sample_sample.alias"), "C0") == TRUE ~ "negativo", 
+  TRUE ~ as.character(get_variable(analyses_ps, "sample_sample.alias")
+))
+grupos
+class(grupos)
+```
+
+```{r}
+tipo_muestra<-get_variable(analyses_ps, "sample_sample.alias")
+sample_names(analyses_ps) <- paste0(tipo_muestra)
+```
+
+## Pre-procesamiento de datos
+
+Seleccionamos los datos de interés basándonos en la abundancia relativa; se generó un nuevo objeto en el que sólo se almacenan las OTUS con una abundancia relativa media superior a 10\^-5 (valor arbitrario para determinar si la especie de bacteria encontrada es parte de la microbiota residente fija)
+
+```{r}
+ar<-transform_sample_counts(analyses_ps, function(x) x / sum(x) )
+ar <- filter_taxa(analyses_ps, function(x) mean(x) > 1e-5, TRUE)
+otu_table(ar)
+```
+
+### **Estimación de diversidad alfa**
+
+La diversidad alfa hace posible la estimación de la magnitud de diversidad en una muestra, y permite realizar análisis sobre la distribución y abundancia de disntintos taxones en la misma. Existen muchos índices que describen qué tan distintas o heterogeneas son las comunidades, y algunos (como Chao1) parten de la valoración de presencia o ausencia de especies raras en las mismas (singletons y doubletons).
+
+El índice de Shannon es una métrica ampliamente utilizada para calcular que tan uniforme es una muestra o comunidad; entre más cercano a 0 sea su valor, puede decirse que se trata de una comunidad con tendencia a ser homogénea, esto es, que su diversidad es poca o nula. Mientras que entre más alto sea su valor, más diversidad hay en la comunidad.
+
+El estimador de Chao1 se basa en la presencia de singletons, es decir, indica cuántos singletons y doubletons hay en una muestra.
+
+El índice de Simpson representa la probabilidad de que si se seleccionan dos individuos pertecientes a una misma comunidad , estos pertenezcan a la misma especie. Entre más alto sea el índice de Simpson, menos diversa es una comunidad.
+
+A continuación, se estima la diversidad alfa mediante el índice de shannon , el estimador de Chao1, y el índice de simpson, para comparar la diversidad microbiana presente en el intestino de gatos domésticos parasitados por *T. cati* en contraste con la diversidad microbiana en el intestino de gatos sanos.
+
+```{r}
+plot_richness(ar, measures=c("Chao1"), title = "Estimación de diversidad alfa en microbiota intestinal de gatos", color =30)
+
+#tabla de estimado de Chao1
+richness <- estimate_richness(ar,measures = "Chao1")
+richness
+```
+
+Como se puede observar, los gatos de bioterio (corresponden a los dos primeros alias de izquierda a derecha) poseen un número menor de singletons y doubletons que los gatos sanos e infectados, mientras que los gatos con infección por *T. cati* presentan un mayor número de singletons y doubletons que los gatos sanos.
+
+```{r}
+plot_richness(ar, measures=c("Shannon"), title = "Estimación de diversidad alfa en microbiota intestinal de gatos")
+#tabla de estimado de índice de Shannon
+richness.sh<-estimate_richness(ar, measures="shannon")
+richness.sh
+
+```
+
+En cuanto al índice de Shannon, se puede observar que las muestras correspondientes a los controles negativos y gatos de bioterio, en su mayoría, tienen un índice de Shannon igual o mayor a tres. Por otra parte, los gatos infectados por T. cani poseen índices de Shannon más pequeños. En realidad, parece ser que, salvo algunas excepciones, la mayoría de las muestras tienen índices mayores a tres.
+
+```{r}
+plot_richness(ar, measures=c("simpson"), title = "Estimación de diversidad alfa en microbiota intestinal de gatos")
+
+#tabla de estimado de índice de simpson
+richness.sp<-estimate_richness(ar, measures = "simpson")
+richness.sp
+
+```
+
+El índice de diversidad de simpson es bastante similar para todas las muestras, ronda al rededor de 0.9. Esto es indicativo de lo homogéneas que son las microbiotas.
+
+Los gatos que cursan con infección por T. cati presentan un índice de diversidad de Simpson menor.
+
+### Resultados de los análisis de secuenciación de RNAr 16s
+
+Para visualizar los resultados de la identidicación de distintas secuencias del RNAr de la subunidad 16s, primero creamos un data frame con los valores de prevalencia, luego les agregamos la taxonomía y graficamos.
+
+```{r}
+# Computamos prevalencia para cada taxa y la guardamos en un data frame
+prevdf = apply(X = otu_table(ar),
+               MARGIN = ifelse(taxa_are_rows(ar), yes = 1, no = 2),
+               FUN = function(x){sum(x > 0)})
+
+# Le agregamos la taxonomía
+prevdf = data.frame(Prevalence = prevdf,
+                    TotalAbundance = taxa_sums(ar),
+                    tax_table(ar))
+#aquí agregamos la abundancia total, que parte de la suma de los distintos taxas
+
+plyr::ddply(prevdf, "Phylum",  function(df1){cbind(mean(df1$Prevalence),sum(df1$Prevalence))}) -> dfprev # aquí fusionamos las abundancias totales y las prevalencias en una sola tabla que presenta _________ preguntar a perlita biohacker cyberpunk 
+df<-kable(dfprev, col.names = c("Phylum","mean.read.count", "prevalencia"))
+df
+```
+
+Al examinar la tabla, es evidente que algunos Phylum aunque presentes, están muy poco representados. La columna 1 representa la media de read counts por Phylum, mientras que la columna 2 representa la suma de prevalencias.
+
+Phylums como Candidatus_Woesebacteria, Crenarchaeota, y Candidatus_Acetothermia están representados solamente por una sola lectura. Es muy riesgoso mantenerlos en el análisis ya que pueden corresponder a falsos positivos. En nuestro caso eliminaremos todos aquellos que tengan menos de cuatro lecturas, así como los que no se hayan identificado, es decir que contengan NA. Para filtrarlos, generamos un vector con todas los phylum que queremos filtrar.
+
+### Definimos taxa a filtrar
+
+```{r}
+filterPhyla = c("Aquificae", "Caldiserica","Candidatus_Acetothermia", "Candidatus_Aminicenantes", "Candidatus_Atribacteria", "Candidatus_Berkelbacteria", "Candidatus_Cloacimonetes", "Candidatus_Colwellbacteria", "Candidatus_Daviesbacteria", "Candidatus_Falkowbacteria", "Candidatus_Firestonebacteria","Candidatus_Gracilibacteria","Candidatus_Hydrogenedentes","Candidatus_Jorgensenbacteria", "Candidatus_Kerfeldbacteria","Candidatus_Komeilibacteria", "Candidatus_Kryptonia","Candidatus_Lindowbacteria","Candidatus_Lloydbacteria","Candidatus_Marinimicrobia",
+                "Candidatus_Nomurabacteria","Candidatus_Parcubacteria","Candidatus_Portnoybacteria","Candidatus_Shapirobacteria","Candidatus_Vogelbacteria", "Candidatus_Woesebacteria", "Candidatus_Yonathbacteria", "Chlorobi", "Crenarchaeota",NA)
+```
+
+Procedemos a filtrar
+
+```{r}
+(psd1 = subset_taxa(ar, !Phylum %in% filterPhyla))
+#Se realiza un subset de los datos presentes en el objeto phyloseq, esto mediante la indicación de que excluya aquellos Phylum que estén presentes en el vector de los phylum que poseen menos de cuatro lecturas o que están registrados con NA. 
+```
+
+Observamos que nuestra OTU table se redujo de 2018 taxas a 1945, distribuídas en 47 muestras.
+
+#### Seguimos filtrando...
+
+Además del filtrado que acabamos de realizar, existen otros tipos de filtrado que tienen que ver con la media de read counts por taxa, con la distribución de éstas, y con filtrar muestras bajo un número mínimo de reads.
+
+```{r}
+# Filtramos taxa de acuerdo a un umbral de número medio de _read counts_, en este caso 1e-5
+
+psd2 <- filter_taxa(psd1, function(x) mean(x) > 1e-5, TRUE)
+psd3 <- filter_taxa(psd2, function(x) sum(x > 2) > (0.1*length(x)), TRUE)
+# Y finalmente filtrar muestras con menos de 1000 reads
+psd4 = prune_samples(sample_sums(psd3) > 1000, psd3)
+psd4
+```
+
+Otra forma de filtrar taxa de baja prevalencia es estableciendo un umbral y luego visualizar el efecto de manera gráfica.
+
+```{r}
+prevdf1 <- subset(prevdf, Phylum %in% get_taxa_unique(psd4, "Phylum"))
+ggplot(prevdf1, aes(TotalAbundance, Prevalence / nsamples(analyses_ps),color=Phylum)) +
+  # Agregamos una línea para nuestro umbral
+  geom_hline(yintercept = 0.05, alpha = 0.5, linetype = 2) +  geom_point(size = 2, alpha = 0.7) +
+  scale_x_log10() +  xlab("Total Abundance") + ylab("Prevalence [Frac. Samples]") +
+  facet_wrap(~Phylum) + theme(legend.position="none")+ geom_tile()
+```
+
+Con nuestro objeto phyloseq ya filtrado y listo para usar, podemos gráficar la distribución de read per counts por número de muestra de forma de tener una idea sobre la distribución de éstas. \# Definimos el umbral de prevalencia a un 5%
+
+------------------------------------------------------------------------
+
+```{r}
+(prevalenceThreshold = 0.05 * nsamples(psd4))
+```
+
+## Filtrado por prevalencia, usando `prune_taxa()` 
+
+Aquí se filtra mediante prevalencia del cada taxa, para filtrarlo por el humbral de prevalencia que se estableció previamente.
+
+```{r}
+keepTaxa = rownames(prevdf1)[(prevdf1$Prevalence >= prevalenceThreshold)]
+(psd5 = prune_taxa(keepTaxa, psd4))
+```
+
+## Conclusiones 
+
+Nuestro proyecto partió del uso de datos de acceso libre para su posterior manipulación y análisis. No se pudieron rechazar ni comprobar las hipótesis debido a problemas relaccionados con el acceso a las variables dentro del objeto phyloseq y la ausencia de variables estratificadas en el mismo.
+
+Las autoras esperan retroalimentación sobre el proyecto para su complementación y mejora, así como para brindar soluciones a este problema de manipulación y manejo de datos.
+
+## Referencias bibliográficas
+
+-   Cortes, A., Peachey, L., Scotti, R., Jenkins, T. P., & Cantacessi, C. (2019). Helminth-microbiota cross-talk--A journey through the vertebrate digestive system. Molecular and Biochemical Parasitology, 233, 111222.
+
+-   EMBL-EBI \| MGnify. Submit, analyse, discover and compare microbiome data. Study MGYS00003433. Helminth infections and gut microbiota a feline perspective. <https://www.ebi.ac.uk/metagenomics/studies/MGYS00003433#overview>
+
+-   Duarte, A. M., Jenkins, T. P., Latrofa, M. S., Giannelli, A., Papadopoulos, E., de Carvalho, L. M., ... & Cantacessi, C. (2016). Helminth infections and gut microbiota--a feline perspective. Parasites & vectors, 9(1), 1-9.
